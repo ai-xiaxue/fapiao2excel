@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#eef2f0; }
+  .cover { width:1500px; height:560px; background:#eef2f0; padding:40px;
+    font-family:"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif; }
+  .title { font-size:30px; font-weight:900; color:#223A30; margin-bottom:6px; }
+  .sub { font-size:20px; color:#5C7A6C; margin-bottom:22px; }
+  table { border-collapse:collapse; width:100%; background:#fff; font-size:22px;
+    box-shadow:0 12px 34px rgba(0,0,0,0.08); border-radius:10px; overflow:hidden; }
+  th, td { border:1px solid #E3EAE6; padding:14px 12px; text-align:left; white-space:nowrap; color:#2A3A32; }
+  thead th { background:#D6F4E6; font-weight:900; color:#1F5B41; }
+  tbody tr:nth-child(even){ background:#F7FBF9; }
+  .exact { color:#2E8F63; font-weight:700; }
+  .ai { color:#C08A2E; font-weight:700; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; }
+  .muted { color:#9AA7A0; }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="title">票据明细.xlsx</div>
+    <div class="sub">一个文件夹的发票 → 一条命令 → 这张表（示例数据）</div>
+    <table>
+      <thead>
+        <tr><th>文件名</th><th>发票类型</th><th>发票号码</th><th>开票日期</th><th>购买方</th><th>销售方</th><th class="num">金额</th><th class="num">税额</th><th class="num">价税合计</th><th>识别方式</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>快递发票.pdf</td><td>电子发票(普通发票)</td><td>2411700000044797****</td><td>2024-08-13</td><td>示例科技有限公司</td><td>顺丰速运</td><td class="num">17.92</td><td class="num">1.08</td><td class="num">19.00</td><td class="exact">精确解析(PDF)</td></tr>
+        <tr><td>打车发票1.pdf</td><td>电子发票(普通发票)</td><td>2531700000217485****</td><td>2025-09-09</td><td>示例科技有限公司</td><td>某出行平台</td><td class="num">12.43</td><td class="num">0.37</td><td class="num">12.80</td><td class="exact">精确解析(PDF)</td></tr>
+        <tr><td>差旅发票.pdf</td><td>增值税电子普通发票</td><td>2432700000110434****</td><td>2025-09-09</td><td>示例科技有限公司</td><td>某服务公司</td><td class="num">171.00</td><td class="num">5.13</td><td class="num">176.13</td><td class="exact">精确解析(PDF)</td></tr>
+        <tr><td>餐饮发票.jpg</td><td>增值税普通发票</td><td>1234****</td><td>2025-09-10</td><td>示例科技有限公司</td><td>某餐饮店</td><td class="num">94.34</td><td class="num">5.66</td><td class="num">100.00</td><td class="ai">AI识别</td></tr>
+        <tr><td>行程报销单.pdf</td><td class="muted">未知</td><td class="muted">—</td><td>2025-09-09</td><td class="muted">—</td><td>某出行平台</td><td class="num">46.00</td><td class="num muted">—</td><td class="num">46.00</td><td class="ai">AI识别</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

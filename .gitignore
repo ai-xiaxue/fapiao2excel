@@ -1,0 +1,20 @@
+# 密钥，绝不提交
+.env
+
+# 虚拟环境
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# 运行产物
+out/
+*.xlsx
+
+# 用户自己的票据样本（隐私，绝不入库）——samples 下除 README 外一切都忽略
+samples/*
+!samples/README.md
+
+# 系统
+.DS_Store
+Thumbs.db
