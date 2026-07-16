@@ -107,13 +107,22 @@ def parse_pdf_textlayer(path: Path) -> tuple[dict | None, int]:
     doc = fitz.open(path)
     try:
         raw = "\n".join(page.get_text() for page in doc)
+        if not raw.strip():
+            return None, 0  # 扫描件，无文字层 → 交给 AI
+        flat = re.sub(r"[ \t\u00a0]+", " ", raw).replace("\n", " ")
+        data = {f: "" for f in FIELDS}
+        _fill_textlayer_fields(flat, data)
+        # 购买方/销售方靠坐标判定（文字流顺序在不同模板里不可靠），失败再回退文字流顺序
+        _fill_parties(doc, flat, data)
     finally:
         doc.close()
-    if not raw.strip():
-        return None, 0  # 扫描件，无文字层 → 交给 AI
 
-    flat = re.sub(r"[ \t\u00a0]+", " ", raw).replace("\n", " ")
-    data = {f: "" for f in FIELDS}
+    hit = sum(1 for f in _KEY_FIELDS if data[f])
+    return data, hit
+
+
+def _fill_textlayer_fields(flat: str, data: dict) -> None:
+    """从扁平化文字层抓 发票号码/代码/日期/金额三元组/发票类型（除买卖方外的字段）。"""
 
     def grab(pattern, group=1):
         m = re.search(pattern, flat)
@@ -147,14 +156,7 @@ def parse_pdf_textlayer(path: Path) -> tuple[dict | None, int]:
             data["发票类型"] = kw
             break
 
-    names = re.findall(r"名\s*称[:：]?\s*([^\s，,；;：:]{2,40}?(?:公司|中心|厂|店|部|所|社|行|院|校|集团|事务所|工作室|个体|个人))", flat)
-    if len(names) >= 1:
-        data["购买方名称"] = names[0]
-    if len(names) >= 2:
-        data["销售方名称"] = names[1]
-
-    hit = sum(1 for f in _KEY_FIELDS if data[f])
-    return data, hit
+    return
 
 
 def _find_amount_triple(amts: list[float]) -> tuple[float, float, float] | None:
@@ -170,6 +172,82 @@ def _find_amount_triple(amts: list[float]) -> tuple[float, float, float] | None:
             if abs(a + b - total) < 0.005:
                 return max(a, b), min(a, b), total
     return None
+
+
+# 公司名后缀（多字后缀，避免像单字"社/行"误命中"统一社会信用代码"）
+_COMPANY_TAIL = ("有限公司", "股份公司", "公司", "集团", "中心", "厂", "事务所", "工作室",
+                 "个体工商户", "合作社", "银行", "医院", "学院", "大学", "研究院", "事业部")
+_COMPANY_RE = r"[\u4e00-\u9fa5（）()]{2,40}?(?:" + "|".join(_COMPANY_TAIL) + r")"
+_NAME_NOISE = ("名称", "统一", "识别号", "信息", "项目", "服务费", "价税", "税人")
+
+
+def _looks_like_company(text: str) -> bool:
+    t = (text or "").strip()
+    if not (4 <= len(t) <= 40):
+        return False
+    if any(bad in t for bad in _NAME_NOISE):
+        return False
+    return t.endswith(_COMPANY_TAIL) and bool(re.fullmatch(r"[\u4e00-\u9fa5（）()]+", t))
+
+
+def _fill_parties(doc, flat: str, data: dict) -> None:
+    """判定 购买方/销售方 名称。
+    首选坐标法：用「购」「销」标签坐标 + 各公司名词块坐标就近归属（文字流顺序在不同模板里不可靠，坐标可靠）；
+    坐标法拿不到再退回文字流顺序启发式。"""
+    buyer = seller = None
+    try:
+        buyer, seller = _parties_by_coords(doc)
+    except Exception:
+        buyer = seller = None
+    if not (buyer or seller):
+        buyer, seller = _parties_by_flow(flat)
+    if buyer:
+        data["购买方名称"] = buyer
+    if seller:
+        data["销售方名称"] = seller
+
+
+def _parties_by_coords(doc):
+    """用词块坐标把两个公司名分给 购买方/销售方。返回 (购买方, 销售方) 或 (None, None)。"""
+    for page in doc:
+        words = page.get_text("words")  # (x0, y0, x1, y1, text, block, line, wno)
+        buy_anchor = next(((w[0], w[1]) for w in words if "购" in w[4]), None)
+        sell_anchor = next(((w[0], w[1]) for w in words if "销" in w[4]), None)
+        if not buy_anchor or not sell_anchor:
+            continue
+        comp_words = [(w[4].strip(), w[0], w[1]) for w in words if _looks_like_company(w[4])]
+        if not comp_words:
+            continue
+        buyer = seller = None
+        best_b = best_s = None
+        for name, x, y in comp_words:
+            db = abs(x - buy_anchor[0]) + abs(y - buy_anchor[1])
+            ds = abs(x - sell_anchor[0]) + abs(y - sell_anchor[1])
+            if db <= ds:
+                if best_b is None or db < best_b:
+                    best_b, buyer = db, name
+            elif best_s is None or ds < best_s:
+                best_s, seller = ds, name
+        if buyer or seller:
+            return buyer, seller
+    return None, None
+
+
+def _parties_by_flow(flat: str):
+    """回退：按公司名在文字流里出现的先后 + 「购买方/销售方」标签先后尽力分派（不保证准确）。"""
+    nospace = flat.replace(" ", "")
+    comps = []
+    for m in re.finditer(_COMPANY_RE, nospace):
+        name = m.group(0).lstrip("日月年号票人注备")  # 去掉可能粘上的日期/标签残字
+        if _looks_like_company(name) and name not in comps:
+            comps.append(name)
+    if not comps:
+        return None, None
+    ib, isell = nospace.find("购买方"), nospace.find("销售方")
+    buyer_first = ib != -1 and (isell == -1 or ib < isell)
+    if len(comps) >= 2:
+        return (comps[0], comps[1]) if buyer_first else (comps[1], comps[0])
+    return comps[0], None
 
 
 def parse_json_loose(text: str) -> dict:
