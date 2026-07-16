@@ -6,6 +6,14 @@
 
 ---
 
+## 缘起（作者的话）
+
+我是个 35+ 的前端。做这个，是因为自己每个月都要把一堆发票挨张抄进 Excel，抄到怀疑人生。
+
+与其焦虑 AI 会不会替掉我，不如把每天烦我的破事一件件搓成工具——**做出来自己就能用，扔出去居然还有人要**，这种踏实比什么都稳。
+
+不打算靠它赚钱，也不卖课。开源免费，拿去改。跑代码卡在哪一步，欢迎提 issue，我一条条答。
+
 ## 为什么做这个（和直接丢千问 App 有啥区别）
 
 单张识别，千问 / 豆包 App 早就免费能做了。这个工具解决的是 App **不做**的那一层：
@@ -54,6 +62,21 @@ python src/extract.py samples -o out/票据明细.xlsx
 > PDF 会先在本地渲染成图再识别，无需额外安装 poppler 等外部程序（用 PyMuPDF）。
 > 暂不支持 OFD（部分税务平台的电子发票格式），如遇到可先转成 PDF。
 
+## 跑不起来？环境排查清单（新手必看）
+
+装了 Python 却报错、跑不动，八成是下面几种，对号入座：
+
+| 报错 / 现象 | 原因 | 怎么解决 |
+|---|---|---|
+| `'python' 不是内部或外部命令` / 敲 python 没反应 | 装 Python 时没勾 PATH | 重装 Python，安装第一屏勾上 **Add python.exe to PATH**；或用 `py` 代替 `python` 试 |
+| `ModuleNotFoundError: No module named xxx` | 依赖没装 | 在**项目文件夹里**跑 `pip install -r requirements.txt`；pip 不识别就用 `python -m pip install -r requirements.txt` |
+| `pip` 装依赖超时 / 失败 | 默认源慢 | 换国内源：`pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple` |
+| 提示缺 `API_KEY` / 401 / 认证失败 | `.env` 没配或 key 没填对 | 复制 `.env.example` 为 `.env`，填好 `API_KEY / BASE_URL / VL_MODEL`（见下方「用哪个模型」）|
+| 电脑里装了好几个 Python，装了依赖还报缺包 | 多版本 / 环境串了 | 建议开个干净虚拟环境：`python -m venv venv` → 激活（Win：`venv\Scripts\activate`）→ 再 `pip install -r requirements.txt` |
+
+> 排查顺序：① `python --version` 能出版本 → ② `pip install -r requirements.txt` 不报错 → ③ `.env` 填好 → ④ 跑 `python src/extract.py samples -o out/票据明细.xlsx`。
+> 还是卡住，把**完整报错**贴 issue，别只说“跑不了”，报错原文最能定位问题。
+
 ## 用哪个模型（模型无关）
 
 工具走 OpenAI 兼容接口，**任何“能读图”的多模态模型都行**，改 `.env` 三行即可：
@@ -73,6 +96,18 @@ python src/extract.py samples -o out/票据明细.xlsx
 金额(不含税) / 税额 / 价税合计 / 备注
 
 想加减字段，改 `src/extract.py` 顶部的 `FIELDS` 列表即可（表头和提取会一起跟着变）。
+
+## 同一套思路还能干啥（Roadmap）
+
+这个工具本质是**「一堆文件 → 一条命令 → 一张结构化 Excel」**的第一个落点。凡是有规律、要重复干很多遍的表格活，都能套同一套思路。已经在做 / 计划做的：
+
+- 📄 **更多单据批量抠数据**：对账单、订单、回单等自带文字层的 PDF，一次全进一张表
+- 🌍 **海外发票 / 多语言**：如土耳其 e-Fatura 等，字段模板可配 + 抠完自动翻译成中文（已有用户在等）
+- 📊 **多表合并**：十几张同格式月报 → 一张年表，按规则自动拼、不漏行
+- 🔎 **从长文本提信息**：手机号 / 金额 / 单号，一段文字一遍挑出来成表
+- ✅ **数据自检**：重复项、合计对不对，程序自己核，比人眼稳
+
+> 想要哪个、或你有自己天天烦的重复活，欢迎提 issue —— 呼声高的先做。
 
 ## 局限 & 隐私（先说清楚）
 
