@@ -46,6 +46,8 @@
 
 ## 快速开始
 
+> 🔰 完全没装过 Python？看这篇手把手教程：[零基础安装教程（Windows）](docs/安装教程.md)
+
 ```bash
 # 1. 装依赖
 pip install -r requirements.txt
